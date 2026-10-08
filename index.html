@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Записи">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3eff3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1118" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Блокнот записів</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one phone-width column. Week strip on top, the day's agenda below, tab bar fixed at the bottom. */
+:root{
+  --bg:#f3eff3; --card:#fffdfe; --ink:#2a1626; --muted:#7b6876; --line:#e4dbe3;
+  --accent:#b0235c; --accent-ink:#ffffff; --accent-soft:#f8e3ec;
+  --ok:#2f7a5e; --warn:#a85a00; --warn-soft:#fbeeda; --danger:#b3261e;
+  --display:"Unbounded","Onest",system-ui,sans-serif;
+  --body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1a1118; --card:#261a23; --ink:#f4e9f0; --muted:#a8939f; --line:#3a2a35;
+  --accent:#ef6a9c; --accent-ink:#2a0a17; --accent-soft:#44202f;
+  --ok:#6cc5a2; --warn:#f0b057; --warn-soft:#3d2c12; --danger:#ff8a80; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#1a1118; --card:#261a23; --ink:#f4e9f0; --muted:#a8939f; --line:#3a2a35;
+  --accent:#ef6a9c; --accent-ink:#2a0a17; --accent-soft:#44202f;
+  --ok:#6cc5a2; --warn:#f0b057; --warn-soft:#3d2c12; --danger:#ff8a80; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:16px 150px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:700;font-size:22px;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 0 0}
+.row{display:flex;align-items:center;gap:10px}
+.spread{justify-content:space-between}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;min-height:44px;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger)}
+.btn.icon{width:44px;padding:0;font-size:20px;line-height:1}
+.btn.wide{width:100%}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{border:1px solid transparent;background:transparent;border-radius:14px;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.day .wd{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.day .dn{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.day .cnt{font-size:11px;height:14px;color:var(--accent);font-weight:700}
+.day.today .dn{color:var(--accent)}
+.day.sel{background:var(--card);border-color:var(--line)}
+.day.sel.today{border-color:var(--accent)}
+
+.list{display:flex;flex-direction:column;gap:8px}
+.appt{display:grid;grid-template-columns:64px 1fr;gap:12px;text-align:left;width:100%;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px 14px}
+.appt .t{font-family:var(--display);font-weight:500;font-size:17px;font-variant-numeric:tabular-nums}
+.appt .te{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.appt .who{font-weight:700;overflow-wrap:anywhere}
+.appt .what{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.appt.past{opacity:.6}
+.appt.now{border-color:var(--accent);background:var(--accent-soft)}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px 14px;min-height:56px}
+.item > div{min-width:0;overflow-wrap:anywhere}
+.item .r{flex:none;text-align:right;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.empty{border:1px dashed var(--line);border-radius:16px;padding:24px 16px;text-align:center;color:var(--muted)}
+.phone{user-select:all;-webkit-user-select:all;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:6px 16px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+.tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.tab{border:0;background:transparent;border-radius:10px;min-height:44px;font-weight:600;font-size:14px;padding:0 2px;color:var(--muted)}
+.tab[aria-current="true"]{color:var(--accent);background:var(--accent-soft)}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700;padding:14px 20px;min-height:52px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+
+.veil{position:fixed;inset:0;background:rgba(20,8,16,.5);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+input,select,textarea{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;min-height:44px;font-size:16px;width:100%;min-width:0;color:var(--ink)}
+textarea{min-height:72px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.warn{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(140px + env(safe-area-inset-bottom,0px));margin:0 auto;max-width:400px;background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 14px;text-align:center;z-index:20;font-weight:600}
+.stats{display:flex;gap:18px;flex-wrap:wrap}
+.stats b{font-family:var(--display);font-weight:500;font-size:18px;display:block}
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="wrap" id="main"></div>
+<button class="fab" id="fab" hidden>+ Новий запис</button>
+<nav class="tabs"><div>
+  <button class="tab" data-view="day">Записи</button>
+  <button class="tab" data-view="clients">Клієнти</button>
+  <button class="tab" data-view="services">Процедури</button>
+  <button class="tab" data-view="backup">Копія</button>
+</div></nav>
+<div class="veil" id="veil" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+"use strict";
+var KEY="bloknot-zapysiv-v1";
+var S={appts:{},clients:{},services:{}};
+var FIREBASE_CONFIG={"apiKey": "AIzaSyDExtAfxU-XObBHI3V5rIyfuLKNcCxJik4", "authDomain": "zapus-klientiv.firebaseapp.com", "projectId": "zapus-klientiv", "storageBucket": "zapus-klientiv.firebasestorage.app", "messagingSenderId": "18441391484", "appId": "1:18441391484:web:c16e2cff2024dcd6f268f9"};
+var db=null, ready=false, cloud=false, auth=null, user=null, unsubs=[];
+var ui={view:"day",day:ymd(new Date()),clientId:null,q:""};
+var $=function(id){return document.getElementById(id)};
+
+/* ---------- helpers ---------- */
+function h(tag,attrs){
+  var e=document.createElement(tag),k,v;
+  for(k in (attrs||{})){v=attrs[k];
+    if(k==="class")e.className=v;
+    else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),v);
+    else if(k==="value")e.value=v;
+    else if(v===true)e.setAttribute(k,"");
+    else if(v!==false&&v!=null)e.setAttribute(k,v);}
+  for(var i=2;i<arguments.length;i++)add(e,arguments[i]);
+  return e;
+}
+function add(e,c){if(c==null||c===false)return;if(Array.isArray(c))c.forEach(function(x){add(e,x)});else e.append(c.nodeType?c:String(c))}
+function pad(n){return(n<10?"0":"")+n}
+function ymd(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d)}
+function toMin(t){var p=t.split(":");return +p[0]*60+ +p[1]}
+function fromMin(m){m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+":"+pad(m%60)}
+function nowMin(){var d=new Date();return d.getHours()*60+d.getMinutes()}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function digits(s){return String(s||"").replace(/\D/g,"")}
+function money(n){return (Number(n)||0).toLocaleString("uk-UA")+" ₴"}
+function longDate(s){var t=parse(s).toLocaleDateString("uk-UA",{weekday:"long",day:"numeric",month:"long"});return t.charAt(0).toUpperCase()+t.slice(1)}
+function shortDate(s){return parse(s).toLocaleDateString("uk-UA",{day:"numeric",month:"short",year:"numeric"})}
+function vals(o){return Object.keys(o).map(function(k){return o[k]})}
+function byTime(a,b){return (a.date+a.time).localeCompare(b.date+b.time)}
+function clientName(a){var c=S.clients[a.clientId];return c?c.name:(a.clientName||"Без імені")}
+function toast(msg){var t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},3000)}
+
+/* ---------- storage: shared database when available, this device otherwise ---------- */
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Не вдалося зберегти на цьому пристрої")}}
+function loadLocal(){try{var r=JSON.parse(localStorage.getItem(KEY)||"null");if(r){S.appts=r.appts||{};S.clients=r.clients||{};S.services=r.services||{}}}catch(e){}}
+var chains={};
+function write(path,data){
+  if(db.direct){(data?db.doc(path).set(data):db.doc(path).delete()).catch(function(){toast("Не вдалося зберегти в хмару. Спробуйте ще раз.")});return}
+  chains[path]=(chains[path]||Promise.resolve()).then(function(){
+    return data?db.doc(path).set(data):db.doc(path).delete();
+  }).catch(function(){toast("Не вдалося зберегти. Перевірте інтернет і спробуйте ще раз.")});
+}
+function persist(kind,id,oldMonth){
+  if(!db){saveLocal();return}
+  if(kind!=="appts"){write(kind+"/"+id,S[kind][id]||null);return}
+  var months={};if(oldMonth)months[oldMonth]=1;
+  if(S.appts[id])months[S.appts[id].date.slice(0,7)]=1;
+  Object.keys(months).forEach(function(m){
+    var items={},n=0;
+    vals(S.appts).forEach(function(a){if(a.date.slice(0,7)===m){items[a.id]=a;n++}});
+    write("months/"+m,n?{items:items}:null);
+  });
+}
+function attach(d){
+  db=d;var got=0;
+  function first(){if(++got>=3){ready=true;if(cloud)migrate()}render()}
+  function sub(q,apply){var seen=false;unsubs.push(q.onSnapshot(function(s){apply(s);if(!seen){seen=true;first()}else render()},
+    function(){toast("Зв’язок із базою втрачено. Відкрийте програму ще раз.")}))}
+  sub(db.collection("months").limit(1000),function(s){var a={};s.docs.forEach(function(x){var it=(x.data()||{}).items||{};for(var k in it)a[k]=it[k]});S.appts=a});
+  sub(db.collection("clients").limit(1000),function(s){var a={};s.docs.forEach(function(x){a[x.id]=x.data()});S.clients=a});
+  sub(db.collection("services").limit(500),function(s){var a={};s.docs.forEach(function(x){a[x.id]=x.data()});S.services=a});
+}
+function pushAll(){
+  var months={};
+  vals(S.appts).forEach(function(a){var m=a.date.slice(0,7);(months[m]=months[m]||{})[a.id]=a});
+  Object.keys(months).forEach(function(m){write("months/"+m,{items:months[m]})});
+  ["clients","services"].forEach(function(k){Object.keys(S[k]).forEach(function(id){write(k+"/"+id,S[k][id])})});
+}
+/* first sign-in on a phone that already has local records: move them to the cloud once */
+function migrate(){
+  if(Object.keys(S.appts).length||Object.keys(S.clients).length||Object.keys(S.services).length)return;
+  var r=null;try{r=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
+  if(!r||!r.appts||!(Object.keys(r.appts).length||Object.keys(r.clients||{}).length||Object.keys(r.services||{}).length))return;
+  S.appts=r.appts;S.clients=r.clients||{};S.services=r.services||{};pushAll();
+  try{localStorage.removeItem(KEY)}catch(e){}
+  toast("Записи з цього телефона перенесено в хмару");
+}
+function startCloud(){
+  cloud=true;
+  document.querySelector('[data-view="backup"]').textContent="Акаунт";
+  if(!window.firebase){ui.fatal=true;render();return}
+  firebase.initializeApp(FIREBASE_CONFIG);
+  var fs=firebase.firestore();
+  fs.enablePersistence({synchronizeTabs:true}).catch(function(){});
+  auth=firebase.auth();
+  render();
+  auth.onAuthStateChanged(function(u){
+    unsubs.forEach(function(f){f()});unsubs=[];
+    user=u;ready=false;db=null;S={appts:{},clients:{},services:{}};
+    if(!u){ui.view="auth";render();return}
+    if(ui.view==="auth")ui.view="day";
+    var base="users/"+u.uid+"/";
+    attach({direct:true,doc:function(p){return fs.doc(base+p)},collection:function(p){return fs.collection(base+p)}});
+    render();
+  });
+}
+function start(){
+  if(FIREBASE_CONFIG){startCloud();return}
+  var c=window.claude;
+  if(!c||!c.use){loadLocal();ready=true;render();return}
+  render();
+  c.use("db").then(function(d){
+    if(!d){loadLocal();ready=true;render();return}
+    attach(d);
+  });
+}
+
+/* ---------- views ---------- */
+function render(){
+  var m=$("main");m.textContent="";
+  document.querySelectorAll(".tab").forEach(function(t){t.setAttribute("aria-current",String(t.dataset.view===ui.view))});
+  $("fab").hidden=!(ready&&ui.view==="day");
+  document.querySelector(".tabs").hidden=!!ui.fatal||ui.view==="auth";
+  if(ui.fatal){add(m,h("div",{class:"empty"},"Для першого запуску потрібен інтернет. Перевірте з’єднання і спробуйте ще раз."),h("button",{class:"btn primary wide",onclick:function(){location.reload()}},"Спробувати ще раз"));return}
+  if(ui.view==="auth"){viewAuth(m);return}
+  if(!ready){add(m,h("div",{class:"empty"},"Завантажую записи…"));return}
+  if(ui.view==="day")viewDay(m);
+  else if(ui.view==="clients")(ui.clientId&&S.clients[ui.clientId])?viewClient(m,S.clients[ui.clientId]):viewClients(m);
+  else if(ui.view==="backup")viewBackup(m);
+  else viewServices(m);
+}
+
+function viewDay(m){
+  var today=ymd(new Date()),sel=parse(ui.day);
+  var mon=addDays(ui.day,-((sel.getDay()+6)%7));
+  var counts={};vals(S.appts).forEach(function(a){counts[a.date]=(counts[a.date]||0)+1});
+  add(m,h("div",{class:"row spread"},
+    h("h1",{},longDate(ui.day)),
+    ui.day!==today&&h("button",{class:"btn ghost small",onclick:function(){ui.day=today;render()}},"Сьогодні")));
+  var week=h("div",{class:"week"});
+  for(var i=0;i<7;i++)(function(d){
+    var dt=parse(d);
+    add(week,h("button",{class:"day"+(d===ui.day?" sel":"")+(d===today?" today":""),"aria-label":longDate(d),onclick:function(){ui.day=d;render()}},
+      h("span",{class:"wd"},dt.toLocaleDateString("uk-UA",{weekday:"short"})),
+      h("span",{class:"dn"},dt.getDate()),
+      h("span",{class:"cnt"},counts[d]?String(counts[d]):"")));
+  })(addDays(mon,i));
+  add(m,week);
+  add(m,h("div",{class:"row"},
+    h("button",{class:"btn icon","aria-label":"Попередній тиждень",onclick:function(){ui.day=addDays(ui.day,-7);render()}},"‹"),
+    h("input",{type:"date",id:"jump","aria-label":"Обрати дату",value:ui.day,onchange:function(e){if(e.target.value){ui.day=e.target.value;render()}}}),
+    h("button",{class:"btn icon","aria-label":"Наступний тиждень",onclick:function(){ui.day=addDays(ui.day,7);render()}},"›")));
+
+  var list=vals(S.appts).filter(function(a){return a.date===ui.day}).sort(byTime);
+  if(!list.length){add(m,h("div",{class:"empty"},"На цей день записів немає. Натисніть «Новий запис», щоб додати перший."));return}
+  var sum=list.reduce(function(s,a){return s+(Number(a.price)||0)},0);
+  add(m,h("div",{class:"muted small"},list.length+" "+plural(list.length,"запис","записи","записів")+(sum?" · "+money(sum):"")));
+  var box=h("div",{class:"list"}),nm=nowMin();
+  list.forEach(function(a){
+    var s=toMin(a.time),e=s+(Number(a.dur)||0),cls="appt";
+    if(a.date<today||(a.date===today&&e<=nm))cls+=" past";
+    else if(a.date===today&&s<=nm&&nm<e)cls+=" now";
+    add(box,h("button",{class:cls,onclick:function(){openAppt(a)}},
+      h("div",{},h("div",{class:"t"},a.time),h("div",{class:"te"},"до "+fromMin(e))),
+      h("div",{style:"min-width:0"},
+        h("div",{class:"who"},clientName(a)),
+        h("div",{class:"what"},[a.service,a.price?money(a.price):null].filter(Boolean).join(" · ")),
+        a.note&&h("div",{class:"what"},a.note))));
+  });
+  add(m,box);
+}
+function plural(n,one,few,many){var a=n%10,b=n%100;return a===1&&b!==11?one:(a>=2&&a<=4&&(b<10||b>=20)?few:many)}
+
+function viewClients(m){
+  add(m,h("div",{class:"row spread"},h("h1",{},"Клієнти"),h("button",{class:"btn",onclick:function(){openClientNew()}},"+ Клієнт")));
+  var all=vals(S.clients);
+  if(!all.length){add(m,h("div",{class:"empty"},"Тут з’являться клієнти. Вони додаються самі, коли ви створюєте запис, або кнопкою «+ Клієнт»."));return}
+  var search=h("input",{type:"search",id:"q",placeholder:"Пошук за ім’ям або номером",value:ui.q,oninput:function(e){ui.q=e.target.value;fill()}});
+  var box=h("div",{class:"list"});
+  add(m,search);add(m,box);
+  var visits={};vals(S.appts).forEach(function(a){visits[a.clientId]=(visits[a.clientId]||0)+1});
+  function fill(){
+    box.textContent="";
+    var q=ui.q.trim().toLowerCase(),qd=digits(q);
+    var res=all.filter(function(c){return !q||c.name.toLowerCase().indexOf(q)>=0||(qd&&digits(c.phone).indexOf(qd)>=0)})
+      .sort(function(a,b){return a.name.localeCompare(b.name,"uk")});
+    if(!res.length){add(box,h("div",{class:"empty"},"Нікого не знайдено"));return}
+    res.forEach(function(c){var n=visits[c.id]||0;
+      add(box,h("button",{class:"item",onclick:function(){ui.clientId=c.id;render();window.scrollTo(0,0)}},
+        h("div",{},h("div",{style:"font-weight:700"},c.name),h("div",{class:"muted small num"},c.phone||"без номера")),
+        h("div",{class:"r"},n+" "+plural(n,"візит","візити","візитів"))));
+    });
+  }
+  fill();
+}
+
+function viewClient(m,c){
+  var today=ymd(new Date()),nm=nowMin();
+  var hist=vals(S.appts).filter(function(a){return a.clientId===c.id}).sort(byTime).reverse();
+  var isPast=function(a){return a.date<today||(a.date===today&&toMin(a.time)<=nm)};
+  var past=hist.filter(isPast),next=hist.filter(function(a){return !isPast(a)}).reverse();
+  var spent=past.reduce(function(s,a){return s+(Number(a.price)||0)},0);
+  add(m,h("div",{},h("button",{class:"btn ghost small",onclick:function(){ui.clientId=null;render()}},"‹ Усі клієнти")));
+  add(m,h("h1",{},c.name));
+  add(m,h("div",{class:"row",style:"flex-wrap:wrap"},
+    c.phone?h("span",{class:"phone"},c.phone):h("span",{class:"muted"},"Номер не вказано"),
+    c.phone&&h("a",{href:"tel:"+c.phone.replace(/[^\d+]/g,"")},"Подзвонити"),
+    c.phone&&h("button",{class:"btn ghost small",onclick:function(){copy(c.phone)}},"Копіювати")));
+  c.note&&add(m,h("div",{class:"muted"},c.note));
+  add(m,h("div",{class:"stats"},
+    h("div",{},h("b",{},String(past.length)),h("span",{class:"muted small"},plural(past.length,"візит","візити","візитів"))),
+    h("div",{},h("b",{},money(spent)),h("span",{class:"muted small"},"усього")),
+    h("div",{},h("b",{},past[0]?shortDate(past[0].date):"—"),h("span",{class:"muted small"},"останній візит"))));
+  add(m,h("div",{class:"row"},
+    h("button",{class:"btn primary",style:"flex:1",onclick:function(){openAppt(null,c)}},"Записати"),
+    h("button",{class:"btn",onclick:function(){openClientEdit(c)}},"Змінити")));
+  function block(title,arr){
+    if(!arr.length)return;
+    add(m,h("h2",{},title));
+    add(m,h("div",{class:"list"},arr.map(function(a){
+      return h("button",{class:"item",onclick:function(){openAppt(a)}},
+        h("div",{},h("div",{style:"font-weight:600"},a.service||"Без процедури"),h("div",{class:"muted small num"},shortDate(a.date)+", "+a.time),a.note&&h("div",{class:"muted small"},a.note)),
+        h("div",{class:"r"},a.price?money(a.price):""));
+    })));
+  }
+  block("Заплановано",next);block("Історія відвідувань",past);
+  if(!hist.length)add(m,h("div",{class:"empty"},"Візитів ще не було"));
+}
+
+function viewServices(m){
+  add(m,h("div",{class:"row spread"},h("h1",{},"Процедури"),h("button",{class:"btn",onclick:function(){openService()}},"+ Процедура")));
+  var all=vals(S.services).sort(function(a,b){return a.name.localeCompare(b.name,"uk")});
+  if(!all.length){add(m,h("div",{class:"empty"},"Додайте свої процедури з тривалістю та ціною. Потім у записі їх можна буде вибрати одним дотиком."));return}
+  add(m,h("div",{class:"list"},all.map(function(s){
+    return h("button",{class:"item",onclick:function(){openService(s)}},
+      h("div",{style:"font-weight:700"},s.name),
+      h("div",{class:"r"},(s.dur||0)+" хв"+(s.price?" · "+money(s.price):"")));
+  })));
+}
+
+/* ---------- account (cloud) ---------- */
+var AUTH_ERR={"auth/invalid-credential":"Неправильна пошта або пароль.","auth/wrong-password":"Неправильна пошта або пароль.","auth/user-not-found":"Акаунта з такою поштою немає.",
+  "auth/email-already-in-use":"Акаунт із такою поштою вже є. Натисніть «Увійти».","auth/weak-password":"Пароль має бути не коротший за 6 символів.",
+  "auth/invalid-email":"Перевірте адресу пошти.","auth/missing-password":"Введіть пароль.","auth/network-request-failed":"Немає інтернету. Спробуйте ще раз.","auth/too-many-requests":"Забагато спроб. Зачекайте кілька хвилин."};
+function viewAuth(m){
+  var email=h("input",{id:"a-email",type:"email",inputmode:"email",autocomplete:"username",autocapitalize:"none",placeholder:"name@example.com"});
+  var pass=h("input",{id:"a-pass",type:"password",autocomplete:"current-password",placeholder:"Не менше 6 символів"});
+  var msg=h("div",{class:"warn",hidden:true});
+  function say(t){msg.textContent=t;msg.hidden=false}
+  function fail(e){say(AUTH_ERR[e&&e.code]||"Не вдалося. Спробуйте ще раз.")}
+  function go(fn){msg.hidden=true;var em=email.value.trim();if(!em){say("Введіть пошту.");return}fn(em,pass.value).catch(fail)}
+  add(m,h("h1",{},"Блокнот записів"));
+  add(m,h("div",{class:"muted"},"Увійдіть, щоб записи зберігалися в хмарі й були доступні на будь-якому телефоні."));
+  add(m,field("Пошта",email));add(m,field("Пароль",pass));add(m,msg);
+  add(m,h("button",{class:"btn primary wide",onclick:function(){go(function(e,p){return auth.signInWithEmailAndPassword(e,p)})}},"Увійти"));
+  add(m,h("button",{class:"btn wide",onclick:function(){go(function(e,p){return auth.createUserWithEmailAndPassword(e,p)})}},"Створити акаунт"));
+  add(m,h("button",{class:"btn ghost wide",onclick:function(){go(function(e){return auth.sendPasswordResetEmail(e).then(function(){say("Лист для зміни пароля надіслано на "+e+".")})})}},"Забули пароль?"));
+}
+function viewAccount(m){
+  add(m,h("h1",{},"Акаунт"));
+  add(m,h("div",{},"Ви увійшли як ",h("b",{},user?user.email:"")));
+  add(m,h("div",{class:"muted"},"Записи зберігаються в хмарі автоматично. На новому телефоні відкрийте програму й увійдіть із цією поштою та паролем."));
+  add(m,h("div",{class:"stats"},
+    h("div",{},h("b",{},String(Object.keys(S.appts).length)),h("span",{class:"muted small"},"записів")),
+    h("div",{},h("b",{},String(Object.keys(S.clients).length)),h("span",{class:"muted small"},"клієнтів"))));
+  add(m,h("button",{class:"btn wide",onclick:exportBackup},"Зберегти копію у файл"));
+  add(m,h("button",{class:"btn danger wide",onclick:function(){auth.signOut()}},"Вийти з акаунта"));
+}
+
+/* ---------- backup ---------- */
+var BK=KEY+"-backup-at";
+function viewBackup(m){
+  if(cloud){viewAccount(m);return}
+  add(m,h("h1",{},"Резервна копія"));
+  if(db){add(m,h("div",{class:"empty"},"У цій версії дані зберігаються в акаунті, копія не потрібна."));return}
+  var last=null;try{last=localStorage.getItem(BK)}catch(e){}
+  add(m,h("div",{class:"muted"},"Усі записи зберігаються тільки на цьому телефоні. Раз на тиждень зберігайте копію у «Файли» або надсилайте собі в месенджер, щоб нічого не втратити."));
+  add(m,h("div",{class:"stats"},
+    h("div",{},h("b",{},String(Object.keys(S.appts).length)),h("span",{class:"muted small"},"записів")),
+    h("div",{},h("b",{},String(Object.keys(S.clients).length)),h("span",{class:"muted small"},"клієнтів")),
+    h("div",{},h("b",{},last?shortDate(last):"ще не було"),h("span",{class:"muted small"},"остання копія"))));
+  add(m,h("button",{class:"btn primary wide",onclick:exportBackup},"Зберегти копію"));
+  add(m,h("h2",{},"Відновлення"));
+  add(m,h("div",{class:"muted small"},"Виберіть файл копії. Усі дані на цьому телефоні буде замінено даними з файлу."));
+  var box=h("div",{class:"list"});
+  var inp=h("input",{type:"file",id:"bk-file","aria-label":"Файл копії",onchange:function(){
+    box.textContent="";var f=inp.files&&inp.files[0];if(!f)return;
+    var r=new FileReader();
+    r.onerror=function(){add(box,h("div",{class:"warn"},"Не вдалося прочитати файл."))};
+    r.onload=function(){
+      var d=null;try{d=JSON.parse(r.result)}catch(e){}
+      var ok=d&&d.app==="bloknot-zapysiv"&&d.appts&&d.clients&&d.services&&typeof d.appts==="object";
+      if(!ok){add(box,h("div",{class:"warn"},"Це не файл копії блокнота."));return}
+      add(box,h("div",{class:"warn"},"У копії від "+(d.saved?shortDate(d.saved.slice(0,10)):"невідомої дати")+": записів "+Object.keys(d.appts).length+", клієнтів "+Object.keys(d.clients).length+"."));
+      add(box,h("button",{class:"btn danger wide",onclick:function(){
+        S.appts=d.appts;S.clients=d.clients;S.services=d.services;saveLocal();ui.view="day";render();toast("Дані відновлено з копії")}},"Замінити дані цією копією"));
+    };
+    r.readAsText(f);
+  }});
+  add(m,inp);add(m,box);
+}
+function exportBackup(){
+  var today=ymd(new Date());
+  var text=JSON.stringify({app:"bloknot-zapysiv",v:1,saved:today,appts:S.appts,clients:S.clients,services:S.services});
+  var name="zapysy-"+today+".txt";
+  function done(){try{localStorage.setItem(BK,today)}catch(e){}render();toast("Копію збережено")}
+  function link(){
+    var a=h("a",{href:URL.createObjectURL(new Blob([text],{type:"text/plain"})),download:name});
+    document.body.appendChild(a);a.click();a.remove();done();
+  }
+  try{
+    var file=new File([text],name,{type:"text/plain"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).then(done,function(e){if(!e||e.name!=="AbortError")link()});return}
+  }catch(e){}
+  link();
+}
+
+/* ---------- sheets ---------- */
+function openSheet(){var s=$("sheet");s.textContent="";for(var i=0;i<arguments.length;i++)add(s,arguments[i]);$("veil").hidden=false;s.scrollTop=0}
+function closeSheet(){$("veil").hidden=true}
+function field(label,el){return h("label",{},label,el)}
+function delBtn(fn){var armed=false;
+  var b=h("button",{class:"btn danger",type:"button",onclick:function(){
+    if(armed){fn();return}armed=true;b.textContent="Точно видалити?";setTimeout(function(){armed=false;b.textContent="Видалити"},3000)}},"Видалити");
+  return b}
+function copy(text){try{navigator.clipboard.writeText(text).then(function(){toast("Номер скопійовано")},function(){toast("Виділіть номер і скопіюйте вручну")})}catch(e){toast("Виділіть номер і скопіюйте вручну")}}
+
+function openAppt(a,client){
+  var isNew=!a,c=a?S.clients[a.clientId]:client;
+  var dayList=vals(S.appts).filter(function(x){return x.date===ui.day}).sort(byTime);
+  var last=dayList[dayList.length-1];
+  var defTime=last?fromMin(Math.min(toMin(last.time)+(Number(last.dur)||0),23*60)):"10:00";
+  var svc=vals(S.services).sort(function(x,y){return x.name.localeCompare(y.name,"uk")});
+  var dl=h("datalist",{id:"f-names"},vals(S.clients).map(function(x){return h("option",{value:x.name})}));
+  var name=h("input",{id:"f-name",list:"f-names",autocomplete:"off",placeholder:"Ім’я клієнта",value:c?c.name:(a?a.clientName||"":"")});
+  var phone=h("input",{id:"f-phone",type:"tel",inputmode:"tel",placeholder:"+380…",value:c?c.phone||"":""});
+  var sel=h("select",{id:"f-svc"},h("option",{value:""},"Вибрати…"),svc.map(function(s){return h("option",{value:s.name},s.name)}),h("option",{value:"__other"},"Інше…"));
+  var custom=h("input",{id:"f-svc-custom",placeholder:"Назва процедури"});
+  var date=h("input",{id:"f-date",type:"date",value:a?a.date:ui.day});
+  var time=h("input",{id:"f-time",type:"time",step:"300",value:a?a.time:defTime});
+  var dur=h("input",{id:"f-dur",type:"number",inputmode:"numeric",min:"5",step:"5",value:a?a.dur:60});
+  var price=h("input",{id:"f-price",type:"number",inputmode:"decimal",min:"0",placeholder:"0",value:a&&a.price?a.price:""});
+  var note=h("textarea",{id:"f-note",placeholder:"Наприклад: колір, побажання"});note.value=a?a.note||"":"";
+  var customWrap=field("Своя процедура",custom);customWrap.hidden=true;
+  if(a&&a.service){
+    if(svc.some(function(s){return s.name===a.service}))sel.value=a.service;
+    else{sel.value="__other";custom.value=a.service;customWrap.hidden=false}
+  }
+  sel.addEventListener("change",function(){
+    customWrap.hidden=sel.value!=="__other";
+    var s=svc.filter(function(x){return x.name===sel.value})[0];
+    if(s){dur.value=s.dur||60;price.value=s.price||""}
+  });
+  name.addEventListener("input",function(){
+    var n=name.value.trim().toLowerCase();
+    var hit=vals(S.clients).filter(function(x){return x.name.toLowerCase()===n})[0];
+    if(hit&&hit.phone&&!phone.value)phone.value=hit.phone;
+  });
+  var warn=h("div",{class:"warn",hidden:true}),force=false;
+  var save=h("button",{class:"btn primary",style:"flex:1",type:"button"},"Зберегти");
+  function invalidate(){force=false;warn.hidden=true;save.textContent="Зберегти"}
+  [date,time,dur].forEach(function(el){el.addEventListener("input",invalidate)});
+  save.addEventListener("click",function(){
+    var nm=name.value.trim(),service=sel.value==="__other"?custom.value.trim():sel.value;
+    var d=Math.max(5,parseInt(dur.value,10)||0);
+    if(!nm){warn.textContent="Вкажіть ім’я клієнта.";warn.hidden=false;name.focus();return}
+    if(!date.value||!time.value){warn.textContent="Вкажіть дату і час.";warn.hidden=false;return}
+    var st=toMin(time.value),en=st+d;
+    var clash=vals(S.appts).filter(function(x){return x.date===date.value&&(!a||x.id!==a.id)&&toMin(x.time)<en&&st<toMin(x.time)+(Number(x.dur)||0)})[0];
+    if(clash&&!force){force=true;warn.textContent="На цей час уже є запис: "+clash.time+" "+clientName(clash)+". Натисніть ще раз, щоб зберегти попри це.";warn.hidden=false;save.textContent="Усе одно зберегти";return}
+    var cl=findOrCreateClient(nm,phone.value.trim(),a&&S.clients[a.clientId]);
+    var id=a?a.id:uid(),oldMonth=a?a.date.slice(0,7):null;
+    S.appts[id]={id:id,clientId:cl.id,clientName:cl.name,service:service,date:date.value,time:time.value,dur:d,price:Number(price.value)||0,note:note.value.trim()};
+    persist("appts",id,oldMonth);
+    ui.day=date.value;if(ui.view!=="clients")ui.view="day";
+    closeSheet();render();toast(isNew?"Запис додано":"Запис збережено");
+  });
+  openSheet(
+    h("div",{class:"row spread"},h("h1",{},isNew?"Новий запис":"Запис"),h("button",{class:"btn ghost",type:"button",onclick:closeSheet},"Закрити")),
+    dl,field("Клієнт",name),field("Телефон",phone),
+    field("Процедура",sel),customWrap,
+    h("div",{class:"grid2"},field("Дата",date),field("Час",time)),
+    h("div",{class:"grid2"},field("Тривалість, хв",dur),field("Ціна, ₴",price)),
+    field("Нотатка",note),warn,
+    h("div",{class:"row"},!isNew&&delBtn(function(){var om=a.date.slice(0,7);delete S.appts[a.id];persist("appts",a.id,om);closeSheet();render();toast("Запис видалено")}),save));
+}
+
+function findOrCreateClient(name,phone,current){
+  var pd=digits(phone),n=name.toLowerCase(),all=vals(S.clients);
+  var hit=(pd&&all.filter(function(c){return digits(c.phone)===pd})[0])
+    ||(current&&current.name.toLowerCase()===n&&current)
+    ||all.filter(function(c){return c.name.toLowerCase()===n&&(!pd||!digits(c.phone))})[0];
+  if(hit){
+    if(phone&&!hit.phone){S.clients[hit.id]={id:hit.id,name:hit.name,phone:phone,note:hit.note||""};persist("clients",hit.id)}
+    return S.clients[hit.id];
+  }
+  var id=uid();S.clients[id]={id:id,name:name,phone:phone,note:""};persist("clients",id);return S.clients[id];
+}
+
+function clientForm(c){
+  var name=h("input",{id:"c-name",placeholder:"Ім’я",value:c?c.name:""});
+  var phone=h("input",{id:"c-phone",type:"tel",inputmode:"tel",placeholder:"+380…",value:c?c.phone||"":""});
+  var note=h("textarea",{id:"c-note",placeholder:"Алергії, побажання, важливе"});note.value=c?c.note||"":"";
+  var warn=h("div",{class:"warn",hidden:true});
+  var save=h("button",{class:"btn primary",style:"flex:1",type:"button",onclick:function(){
+    var nm=name.value.trim();if(!nm){warn.textContent="Вкажіть ім’я.";warn.hidden=false;return}
+    var id=c?c.id:uid();
+    S.clients[id]={id:id,name:nm,phone:phone.value.trim(),note:note.value.trim()};persist("clients",id);
+    ui.view="clients";ui.clientId=id;closeSheet();render();toast("Збережено");
+  }},"Зберегти");
+  openSheet(
+    h("div",{class:"row spread"},h("h1",{},c?"Клієнт":"Новий клієнт"),h("button",{class:"btn ghost",type:"button",onclick:closeSheet},"Закрити")),
+    field("Ім’я",name),field("Телефон",phone),field("Нотатка",note),warn,
+    c&&h("div",{class:"muted small"},"Якщо видалити клієнта, його записи залишаться в календарі."),
+    h("div",{class:"row"},c&&delBtn(function(){delete S.clients[c.id];persist("clients",c.id);ui.clientId=null;closeSheet();render();toast("Клієнта видалено")}),save));
+}
+function openClientNew(){clientForm(null)}
+function openClientEdit(c){clientForm(c)}
+
+function openService(s){
+  var name=h("input",{id:"s-name",placeholder:"Наприклад: манікюр",value:s?s.name:""});
+  var dur=h("input",{id:"s-dur",type:"number",inputmode:"numeric",min:"5",step:"5",value:s?s.dur:60});
+  var price=h("input",{id:"s-price",type:"number",inputmode:"decimal",min:"0",placeholder:"0",value:s&&s.price?s.price:""});
+  var warn=h("div",{class:"warn",hidden:true});
+  var save=h("button",{class:"btn primary",style:"flex:1",type:"button",onclick:function(){
+    var nm=name.value.trim();if(!nm){warn.textContent="Вкажіть назву.";warn.hidden=false;return}
+    var id=s?s.id:uid();
+    S.services[id]={id:id,name:nm,dur:Math.max(5,parseInt(dur.value,10)||60),price:Number(price.value)||0};persist("services",id);
+    closeSheet();render();toast("Збережено");
+  }},"Зберегти");
+  openSheet(
+    h("div",{class:"row spread"},h("h1",{},s?"Процедура":"Нова процедура"),h("button",{class:"btn ghost",type:"button",onclick:closeSheet},"Закрити")),
+    field("Назва",name),h("div",{class:"grid2"},field("Тривалість, хв",dur),field("Ціна, ₴",price)),warn,
+    h("div",{class:"row"},s&&delBtn(function(){delete S.services[s.id];persist("services",s.id);closeSheet();render();toast("Процедуру видалено")}),save));
+}
+
+/* ---------- wiring ---------- */
+document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){ui.view=t.dataset.view;ui.clientId=null;render();window.scrollTo(0,0)})});
+$("fab").addEventListener("click",function(){openAppt(null)});
+$("veil").addEventListener("click",function(e){if(e.target===$("veil"))closeSheet()});
+if("serviceWorker" in navigator&&!window.claude&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});
+start();
+})();
+</script>
+</body>
+</html>
