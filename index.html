@@ -403,7 +403,7 @@ function viewServices(m){
     if(c!==cur){cur=c;add(m,h("h2",{},c));box=h("div",{class:"list"});add(m,box)}
     add(box,h("button",{class:"item",onclick:function(){openService(s)}},
       h("div",{style:"font-weight:600"},s.name),
-      h("div",{class:"r"},h("div",{style:"color:var(--ink);font-weight:600"},s.price?money(s.price):""),h("div",{class:"small"},(s.dur||0)+" хв"+(s.cost?" · собів. "+s.cost:"")))));
+      h("div",{class:"r"},h("div",{style:"color:var(--ink);font-weight:600"},s.price?money(s.price):""),h("div",{class:"small"},(s.dur||0)+" хв"))));
   });
 }
 
